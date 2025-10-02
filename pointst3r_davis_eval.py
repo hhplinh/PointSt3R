@@ -134,9 +134,9 @@ def eval_on_davis_points(y_res=384, w_vis=False, davis_root="/lus/lfs1aip2/home/
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=1)
 
     d_avg_ls = []
+    vis_ls, vis_pos_ls, vis_neg_ls = [], [], []
     for sample_idx, sample in tqdm(enumerate(dataloader)):
         seq_name = sample["seq_name"][0]
-        sample_points = 0
 
         rgbs = sample["rgbs"][0]
         trajs_g = sample["trajs"][0].cuda().float()
@@ -172,15 +172,14 @@ def eval_on_davis_points(y_res=384, w_vis=False, davis_root="/lus/lfs1aip2/home/
             query_ft, target_ft, query_vis_mask, _ = get_mast3r_ft(query_img_dict, target_img_dict, model, device)
 
             for point_idx in range(trajs_g.shape[1]):
+                if w_vis:
+                    visibs_e[frame_idx, point_idx] = 1 if query_vis_mask[int(query_points[point_idx, 1]), int(query_points[point_idx, 0])] > 0.5 else 0
                 if first_appearances[point_idx] != 0:
                     continue
                 if valids[frame_idx, point_idx] != 1:
                     continue
 
                 trajs_e[frame_idx, point_idx, :] = predict_point_trajectory(query_points[point_idx, :], query_ft, target_ft)
-                if w_vis:
-                    visibs_e[frame_idx, point_idx] = 1 if query_vis_mask[int(query_points[point_idx, 1]), int(query_points[point_idx, 0])] > 0.5 else 0
-                sample_points += 1
  
         # Then, do new for remaining points
         for point_idx in tqdm(range(trajs_g.shape[1])):
@@ -208,10 +207,13 @@ def eval_on_davis_points(y_res=384, w_vis=False, davis_root="/lus/lfs1aip2/home/
        
                 query_ft, target_ft, query_vis_mask, _ = get_mast3r_ft(query_img_dict, target_img_dict, model, device)
 
-                trajs_e[frame_idx, point_idx, :] = predict_point_trajectory(query_point, query_ft, target_ft)
                 if w_vis:
                     visibs_e[frame_idx, point_idx] = 1 if query_vis_mask[int(query_point[1]), int(query_point[0])] > 0.5 else 0
-                sample_points += 1
+
+                if valids[frame_idx, point_idx] != 1:
+                    continue
+
+                trajs_e[frame_idx, point_idx, :] = predict_point_trajectory(query_point, query_ft, target_ft)
  
         sx = (256.0 / 512.0)
         sy = (256.0 / float(y_res))
@@ -244,20 +246,20 @@ def eval_on_davis_points(y_res=384, w_vis=False, davis_root="/lus/lfs1aip2/home/
         # Visibility Accuracy
         if w_vis:
             # All
-            vis_matches = (trajs_g[torch.where(valids == 1)] == trajs_e[torch.where(valids == 1)])
-            vis_ls.append((torch.sum(vis_matches) / torch.sum(valids)) * 100.0)
+            vis_matches = (visibs_g == visibs_e)
+            vis_ls.append((torch.sum(vis_matches) / torch.numel(visibs_g)) * 100.0)
 
             # Positive
-            pos_valids = valids * visibs_g
-            vis_pos_matches = (trajs_g[torch.where(pos_valids == 1)] == trajs_e[torch.where(pos_valids == 1)])
-            vis_pos_ls.append((torch.sum(vis_pos_matches) / torch.sum(pos_valids)) * 100.0)
+            vis_pos_matches = (visibs_g[torch.where(visibs_g == 1)] == visibs_e[torch.where(visibs_g == 1)])
+            vis_pos_ls.append((torch.sum(vis_pos_matches) / torch.sum(visibs_g)) * 100.0)
 
             # Negative
-            neg_valids = valids * (~visibs_g)
-            vis_neg_matches = (trajs_g[torch.where(neg_valids == 1)] == trajs_e[torch.where(neg_valids == 1)])
-            vis_neg_ls.append((torch.sum(vis_neg_matches) / torch.sum(neg_valids)) * 100.0)
+            occ_g = (1 - visibs_g)
+            vis_neg_matches = (visibs_g[torch.where(occ_g == 1)] == visibs_e[torch.where(occ_g == 1)])
+            if torch.sum(occ_g) != 0:
+                vis_neg_ls.append((torch.sum(vis_neg_matches) / torch.sum(occ_g)) * 100.0)
 
-            print(f"RUNNING vis_acc={sum(vis_ls)/len(vis_ls)}%, vis_acc_pos={sum(vis_pos_ls)/len(vis_pos_ls)}%, vis_acc_neg={sum(vis_neg_ls)/len(vis_neg_ls)}%")
+            print(f"RUNNING vis_acc={sum(vis_ls)/len(vis_ls)}%, vis_acc_pos={sum(vis_pos_ls)/len(vis_pos_ls)}%, vis_acc_neg={sum(vis_neg_ls)/len(vis_neg_ls) if len(vis_neg_ls) != 0 else None}%")
  
     metrics = {"d_avg": (sum(d_avg_ls) / len(d_avg_ls))}
     if w_vis:
