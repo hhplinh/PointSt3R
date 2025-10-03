@@ -36,18 +36,12 @@ Links for downloading the evaluatation datasets used in the paper are as follows
 - [`EgoPoints`](https://www.dropbox.com/scl/fo/tfvctluqu3cr17jr6q0td/AA6h6GlV-x6QeuupmeLejzA?rlkey=r0q12vbi6wour6qsteklivb6p&e=1&st=1e4b4dnn&dl=0)
 - [`PointOdyssey Static/Dynamic Split`](https://www.placeholder.com/PO_static_dynamic)
 
-### TAP-Vid-DAVIS
+### TAP-Vid
+The evaluations for DAVIS, RoboTAP and RGB-Stacking can all be run with the following script:
 ```
-python3 pointst3r_davis_eval.py --checkpoint=checkpoints/PointSt3R_95.pth --input_yres=384 --davis_root=/your/path/that/contains/tapvid_davis.pkl
+python3 pointst3r_tapnet_eval.py --checkpoint=checkpoints/PointSt3R_95.pth --input_yres=384 --dataset_location=/your/path/that/contains/data --dataset_name=[davis, robo or rgb] --split=[0, 1, 2, 3, 4 or None]
 ```
-
-### RoboTAP
-```
-```
-
-### TAP-Vid-RGB-Stacking
-```
-```
+Note that a split number can be defined when evaluating RoboTAP.
 
 ### EgoPoints
 ```
