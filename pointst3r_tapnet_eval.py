@@ -30,16 +30,36 @@ ToTensor = tvf.ToTensor()
 TAG_FLOAT = 202021.25
 
 
-class TapVidDavis(Dataset):
-    def __init__(self, dataset_location="/lus/lfs1aip2/home/u5ad/rhodriguerrier.u5ad"):
-        input_path = f"{dataset_location}/tapvid_davis.pkl"
-        with open(input_path, "rb") as f:
-            data = pickle.load(f)
-            self.seq_names = list(data.keys())
-            if isinstance(data, dict):
-                data = list(data.values())
-        self.data = data
-        print(f"Found {len(self.data)} video in {input_path}")
+class TapVidDataset(Dataset):
+    def __init__(
+        self,
+        dataset_name="davis",
+        dataset_location="/lus/lfs1aip2/home/u5ad/rhodriguerrier.u5ad",
+        split=None
+    ):
+        if dataset_name == "davis":
+            input_path = f"{dataset_location}/tapvid_davis.pkl"
+            with open(input_path, "rb") as f:
+                data = pickle.load(f)
+                self.seq_names = list(data.keys())
+                if isinstance(data, dict):
+                    data = list(data.values())
+            self.data = data
+            print(f"Found {len(self.data)} video in {input_path}")
+        elif dataset_name == "robo":
+            self.data, self.seq_names = [], []
+            split_nums = [i for i in range(5)] if split is None else [split]
+            for i in split_nums:
+                input_path = f"{dataset_location}/robotap_split{i}.pkl"
+                with open(input_path, "rb") as f:
+                    data = pickle.load(f)
+                    self.data.append(list(data.values()))
+                    self.seq_names.append(list(data.keys()))
+        elif dataset_name == "rgb":
+            input_path = f"{dataset_location}/tapvid_rgb_stacking.pkl"
+            with open(input_path, "rb") as f:
+                self.data = pickle.load(f)
+            self.seq_names = [str(i).zfill(3) for i in range(len(self.data))]
 
     def __len__(self):
         return len(self.data)
@@ -49,18 +69,10 @@ class TapVidDavis(Dataset):
         rgbs = dat['video'] # list of H,W,C uint8 images
         trajs = dat['points'] # N,S,2 array
         valids = 1-dat['occluded'] # N,S array
-        # note the annotations are only valid when not occluded
 
         trajs = trajs.transpose(1,0,2) # S,N,2
         valids = valids.transpose(1,0) # S,N
 
-        ###
-        #vis_ok = valids[0] > 0
-        #trajs = trajs[:,vis_ok]
-        #valids = valids[:,vis_ok]
-        ###
-
-        # 1.0,1.0 should lie at the bottom-right corner pixel
         H, W, C = rgbs[0].shape
         trajs[:,:,0] *= W-1
         trajs[:,:,1] *= H-1
@@ -127,10 +139,15 @@ def predict_point_trajectory(query_point, query_ft, target_ft):
     return target_coords_pred
 
 
-def eval_on_davis_points(y_res=384, w_vis=False, davis_root="/lus/lfs1aip2/home/u5ad/rhodriguerrier.u5ad"):
+def eval_on_davis_points(
+    y_res=384,
+    w_vis=False,
+    dataset_location="/lus/lfs1aip2/home/u5ad/rhodriguerrier.u5ad",
+    dataset_name="davis",
+    split=None
+):
     thresholds = [1, 2, 4, 8, 16]
-
-    dataset = TapVidDavis(dataset_location=davis_root)
+    dataset = TapVidDataset(dataset_location=dataset_location, dataset_name=dataset_name, split=split)
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=1)
 
     d_avg_ls = []
@@ -277,13 +294,18 @@ niter = 300
 parser = argparse.ArgumentParser('PointSt3R DAVIS Evaluation', add_help=False)
 parser.add_argument("--checkpoint", default="checkpoints/PointSt3R_95.pth", type=str)
 parser.add_argument("--input_yres", default=384, type=int)
-parser.add_argument("--davis_root", default="/lus/lfs1aip2/home/u5ad/rhodriguerrier.u5ad", type=str)
+parser.add_argument("--dataset_location", default="/lus/lfs1aip2/home/u5ad/rhodriguerrier.u5ad", type=str)
+parser.add_argument("--dataset_name", default="davis", type=str)
+parser.add_argument("--split", default=None)
 args = parser.parse_args()
-checkpoint_path = args.checkpoint
-davis_root = args.davis_root
-y_res = args.input_yres
 
-model = AsymmetricMASt3R.from_pretrained(checkpoint_path).to(device)
+model = AsymmetricMASt3R.from_pretrained(args.checkpoint).to(device)
 model.eval() 
-metrics = eval_on_davis_points(y_res=y_res, w_vis=True if "vis" in checkpoint_path else False, davis_root=davis_root)
+metrics = eval_on_davis_points(
+    y_res=args.input_yres,
+    w_vis=True if "vis" in args.checkpoint else False,
+    dataset_location=args.dataset_location,
+    dataset_name=args.dataset_name,
+    split=args.split
+)
 print(metrics)

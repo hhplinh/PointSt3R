@@ -1,4 +1,4 @@
-# PointSt3R: Point Tracking Through 3D Ground Correspondence
+# PointSt3R: Point Tracking Through 3D Grounded Correspondence
 This is the official implementation of PointSt3R, a variant of MASt3R fine-tuned to better handle dynamic point tracking.
 
 ## Environment
@@ -31,9 +31,30 @@ If you are not using ARM, it may be easier to follow the [`original MASt3R repo`
 ## Evaluation
 You can download the PointSt3R models with and without visibility, trained with 95% dynamic correspondences per batch from the following [`google drive link`](https://www.placeholder.com/PointSt3R).
 
-We provide evaluation scripts for TAP-Vid-DAVIS, RoboTAP, TAP-Vid-RGB-Stacking, EgoPoints and PointOdyssey (our static/dynamic split). For example, to run the DAVIS evaluation, simply run:
+Links for downloading the evaluatation datasets used in the paper are as follows:
+- [`TAP-Vid-DAVIS, TAP-Vid-RGB-Stacking & RoboTAP`](https://github.com/google-deepmind/tapnet/tree/main/tapnet/tapvid)
+- [`EgoPoints`](https://www.dropbox.com/scl/fo/tfvctluqu3cr17jr6q0td/AA6h6GlV-x6QeuupmeLejzA?rlkey=r0q12vbi6wour6qsteklivb6p&e=1&st=1e4b4dnn&dl=0)
+- [`PointOdyssey Static/Dynamic Split`](https://www.placeholder.com/PO_static_dynamic)
+
+### TAP-Vid-DAVIS
 ```
 python3 pointst3r_davis_eval.py --checkpoint=checkpoints/PointSt3R_95.pth --input_yres=384 --davis_root=/your/path/that/contains/tapvid_davis.pkl
+```
+
+### RoboTAP
+```
+```
+
+### TAP-Vid-RGB-Stacking
+```
+```
+
+### EgoPoints
+```
+```
+
+### PO Static/Dynamic Split
+```
 ```
 
 ## Training
@@ -43,7 +64,7 @@ You will need to download the following datasets:
 | Dataset | Download Link | Post-Processing |
 | :---: | :---: | :---: |
 | PointOdyssey | [`MonSt3R`](https://github.com/Junyi42/monst3r/blob/main/data/download_pointodyssey.sh) | N/A |
-| Kubric | [`CoTracker3 Kubirc dataset`](https://huggingface.co/datasets/facebook/CoTracker3_Kubric) | N/A|
+| Kubric | [`CoTracker3 Kubric dataset`](https://huggingface.co/datasets/facebook/CoTracker3_Kubric) | N/A|
 | DynamicReplica | [`DynamicStereo`](https://github.com/facebookresearch/dynamic_stereo) | Yes |
 
 **TO DO:** Add post-processing script for DynamicReplica dataset.
