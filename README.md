@@ -45,6 +45,7 @@ Note that a split number can be defined when evaluating RoboTAP.
 
 ### EgoPoints
 ```
+python3 pointst3r_ego_points_eval.py --checkpoint=checkpoints/PointSt3R_95.pth --input_yres=384 --eval_folder=/your/path/that/contains/ego_points
 ```
 
 ### PO Static/Dynamic Split
