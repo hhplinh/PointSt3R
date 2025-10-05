@@ -60,9 +60,7 @@ You will need to download the following datasets:
 | :---: | :---: | :---: |
 | PointOdyssey | [`MonSt3R`](https://github.com/Junyi42/monst3r/blob/main/data/download_pointodyssey.sh) | N/A |
 | Kubric | [`CoTracker3 Kubric dataset`](https://huggingface.co/datasets/facebook/CoTracker3_Kubric) | N/A|
-| DynamicReplica | [`DynamicStereo`](https://github.com/facebookresearch/dynamic_stereo) | Yes |
-
-**TO DO:** Add post-processing script for DynamicReplica dataset.
+| DynamicReplica | [`DynamicStereo`](https://github.com/facebookresearch/dynamic_stereo) | [`format_dr_annots.py`](./format_dr_annots.py) |
 
 To train PointSt3R without visibility, run the following:
 ```bash
