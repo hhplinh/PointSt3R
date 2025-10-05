@@ -36,6 +36,7 @@ Links for downloading the evaluatation datasets used in the paper are as follows
 - [`TAP-Vid-DAVIS, TAP-Vid-RGB-Stacking & RoboTAP`](https://github.com/google-deepmind/tapnet/tree/main/tapnet/tapvid)
 - [`EgoPoints`](https://www.dropbox.com/scl/fo/tfvctluqu3cr17jr6q0td/AA6h6GlV-x6QeuupmeLejzA?rlkey=r0q12vbi6wour6qsteklivb6p&e=1&st=1e4b4dnn&dl=0)
 - [`PointOdyssey Static/Dynamic Split`](https://www.placeholder.com/PO_static_dynamic)
+- [`Pstudio Minival`](https://github.com/google-deepmind/tapnet/tree/main/tapnet/tapvid3d)
 
 ### TAP-Vid
 The evaluations for DAVIS, RoboTAP and RGB-Stacking can all be run with the following script:
@@ -53,6 +54,16 @@ python3 pointst3r_ego_points_eval.py --checkpoint=checkpoints/PointSt3R_95.pth -
 ```
 python3 pointst3r_po_stat_dyn_eval.py --checkpoint=checkpoints/PointSt3R_95.pth --input_yres=384 --dataset_location=/your/path/to/pointodyssey_v2/test --annots_location=/your/path/to/pointodyssey_v2/static_dynamic_test
 ```
+
+### Pstudio Minival (3D)
+First generate the 3D tracks using the following command (split simply chooses which 10 of the 50 files in minival you want to generate for, as the evaluation takes a long time):
+```
+python3 pointst3r_pstudio_3d_eval.py --checkpoint=checkpoints/PointSt3R_95.pth --input_yres=288 --save_folder=pstudio_minival_results_PointSt3R_95 --dataset_location=/your/path/to/tapvid3d_datasets --split=[0, 1, 2, 3 or 4]
+```
+Then use this [`script`](https://github.com/google-deepmind/tapnet/blob/main/tapnet/tapvid3d/evaluation/evaluate_model.py) to evaluate the tracks. For our evaluation we edit this script to have the following options:
+- `Scaling = median`
+- `Thresholds = [0.1, 0.3, 0.5, 1.0]`
+- `Use Fixed Thresholds = True`
 
 ## Training
 Download the baseline checkpoint [`MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric`](https://download.europe.naverlabs.com/ComputerVision/MASt3R/MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric.pth).
