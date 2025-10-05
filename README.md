@@ -51,6 +51,7 @@ python3 pointst3r_ego_points_eval.py --checkpoint=checkpoints/PointSt3R_95.pth -
 
 ### PO Static/Dynamic Split
 ```
+python3 pointst3r_po_stat_dyn_eval.py --checkpoint=checkpoints/PointSt3R_95.pth --input_yres=384 --dataset_location=/your/path/to/pointodyssey_v2/test --annots_location=/your/path/to/pointodyssey_v2/static_dynamic_test
 ```
 
 ## Training
