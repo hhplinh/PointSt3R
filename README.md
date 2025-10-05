@@ -1,5 +1,6 @@
 # PointSt3R: Point Tracking Through 3D Grounded Correspondence
 This is the official implementation of PointSt3R, a variant of MASt3R fine-tuned to better handle dynamic point tracking.
+![Figure](./assets/main_figure_final.png)
 
 ## Environment
 Our work was conducted on ARM achitecture, so the environment was created in the following way:
