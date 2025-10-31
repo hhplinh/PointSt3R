@@ -1,4 +1,6 @@
 # PointSt3R: Point Tracking Through 3D Grounded Correspondence
+## [Project Page](https://rhodriguerrier.github.io/PointSt3R) | [Paper](https://arxiv.org/abs/2510.26443) | [BibTeX](#citing-pointst3r)
+
 This is the official implementation of PointSt3R, a variant of MASt3R fine-tuned to better handle dynamic point tracking.
 ![Figure](./assets/main_figure_final.png)
 
@@ -100,4 +102,14 @@ torchrun --nproc_per_node=4 --master_port=29350 train.py \
     --lr 0.00005 --min_lr 1e-06 --warmup_epochs 3 --epochs 50 --batch_size 4 --accum_iter 1 \
     --save_freq 1 --keep_freq 1 --eval_freq 1 --print_freq=10 --disable_cudnn_benchmark \
     --output_dir "results/PointSt3R_95_w_vis.pth"
+```
+
+## Citing PointSt3R
+```bibtex
+@article{
+  title = {{PointSt3R}: Point Tracking through 3D Ground Correspondence},
+  author={Guerrier, Rhodri and Harley, Adam W. and Damen, Dima},
+  journal={arXiv},
+  year={2025}
+}
 ```
