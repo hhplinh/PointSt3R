@@ -106,10 +106,10 @@ torchrun --nproc_per_node=4 --master_port=29350 train.py \
 
 ## Citing PointSt3R
 ```bibtex
-@article{
+@inproceedings{
   title = {{PointSt3R}: Point Tracking through 3D Ground Correspondence},
   author={Guerrier, Rhodri and Harley, Adam W. and Damen, Dima},
-  journal={arXiv},
-  year={2025}
+  booktitle={Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)},
+  year={2026}
 }
 ```
