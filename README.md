@@ -32,7 +32,7 @@ pip install pypng
 If you are not using ARM, it may be easier to follow the [`original MASt3R repo`](https://github.com/naver/mast3r).
 
 ## Evaluation
-You can download the PointSt3R models with and without visibility, trained with 95% dynamic correspondences per batch from the following [`OneDrive link`](https://uob-my.sharepoint.com/:f:/g/personal/rg16964_bristol_ac_uk/EhpOno_hpGtJtSthVr0S4LUBFl4ZQbIJrm8_B1O-h-UXQQ?e=sTuaQ3).
+You can download the PointSt3R models with and without visibility, trained with 95% dynamic correspondences per batch from the following [`OneDrive link`](https://uob-my.sharepoint.com/:f:/g/personal/rg16964_bristol_ac_uk/EhpOno_hpGtJtSthVr0S4LUBFl4ZQbIJrm8_B1O-h-UXQQ?e=XU40Q7).
 
 Links for downloading the evaluatation datasets used in the paper are as follows:
 - [`TAP-Vid-DAVIS, TAP-Vid-RGB-Stacking & RoboTAP`](https://github.com/google-deepmind/tapnet/tree/main/tapnet/tapvid)
