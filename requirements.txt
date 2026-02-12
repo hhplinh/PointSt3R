@@ -1,0 +1,29 @@
+# Core requirements for PointSt3R
+# Add optional packages as needed from requirements_optional.txt
+
+torch
+torchvision
+roma
+gradio
+matplotlib
+tqdm
+opencv-python
+scipy
+einops
+trimesh
+tensorboard
+pyglet<2
+huggingface-hub[torch]>=0.22
+numpy
+Pillow
+setuptools
+# Ensure CUDA toolkit is installed on your system (not pip installable)
+# dust3r and its dependencies should be included if used
+# Optional dependencies (uncomment as needed):
+# pillow-heif
+# pyrender
+# kapture
+# kapture-localization
+# numpy-quaternion
+# pycolmap
+# poselib

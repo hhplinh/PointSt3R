@@ -1,6 +1,5 @@
 import os
 import glob
-import argparse
 import numpy as np
 from PIL import Image, ImageDraw
 import torch
@@ -9,6 +8,7 @@ from mast3r.model import AsymmetricMASt3R
 import mast3r.utils.path_to_dust3r
 from dust3r.inference import inference
 import logging
+import gradio as gr
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -40,58 +40,32 @@ def get_mast3r_ft(query_img, target_img, model, device):
     view2, pred2 = output["view2"], output["pred2"]
     return pred1["desc"].detach().cpu(), pred2["desc"].detach().cpu()
 
-def main():
-    parser = argparse.ArgumentParser("PointSt3R Inference on Custom Frames")
-    parser.add_argument("--frames_dir", default="data/frames", required=True, help="Directory with input frames (jpg/png)")
-    parser.add_argument("--checkpoint", default="checkpoints/PointSt3R_95.pth", help="Path to model checkpoint")
-    parser.add_argument("--input_yres", default=288, type=int, help="Image height after resize")
-    parser.add_argument("--num_points", default=10, type=int, help="Number of points to track")
-    parser.add_argument("--output_dir", default="output_tracks", help="Directory to save visualizations")
-    args = parser.parse_args()
-
-    os.makedirs(args.output_dir, exist_ok=True)
-    frame_paths = sorted(glob.glob(os.path.join(args.frames_dir, '*.jpg')) + glob.glob(os.path.join(args.frames_dir, '*.png')))
+def gradio_pointst3r(frames_dir, checkpoint, input_yres, output_dir, points):
+    os.makedirs(output_dir, exist_ok=True)
+    frame_paths = sorted(glob.glob(os.path.join(frames_dir, '*.jpg')) + glob.glob(os.path.join(frames_dir, '*.png')))
     if len(frame_paths) < 2:
-        logging.error("Need at least 2 frames for tracking.")
-        return
-
-    # Load model
-    model = AsymmetricMASt3R.from_pretrained(args.checkpoint).to(device)
-    logging.info(f"Loaded model from {args.checkpoint}")
+        return "Need at least 2 frames for tracking.", None
+    model = AsymmetricMASt3R.from_pretrained(checkpoint).to(device)
     model.eval()
-    logging.info(f"Tracking {args.num_points} points across {len(frame_paths)} frames.")
-
-    # Load first frame and select points randomly
     first_img = Image.open(frame_paths[0])
     w, h = first_img.size
-    np.random.seed(42)
-    points = np.stack([
-        np.random.uniform(0, w, args.num_points),
-        np.random.uniform(0, h, args.num_points)
-    ], axis=-1)
-    logging.info(f"Initial points: {points}")
-
-    # Prepare first image for model
-    query_img_dict, query_img_shape = load_img_for_pointst3r(frame_paths[0], args.input_yres, 0, "query_img")
+    points_np = np.array(points)
+    query_img_dict, query_img_shape = load_img_for_pointst3r(frame_paths[0], input_yres, 0, "query_img")
     H_, W_, _ = query_img_shape
     sy = H_ / h
     sx = W_ / w
-    points_scaled = points.copy()
+    points_scaled = points_np.copy()
     points_scaled[:, 0] *= sx
     points_scaled[:, 1] *= sy
-    logging.info(f"Scaled points for model input: {points_scaled}")
-
-    # Track points across frames
-    tracks = [points.copy()]
+    tracks = [points_np.copy()]
     prev_img_dict = query_img_dict
     prev_points = points_scaled
     for idx, frame_path in enumerate(frame_paths[1:], 1):
-        target_img_dict, _ = load_img_for_pointst3r(frame_path, args.input_yres, idx, f"frame_{idx}")
+        target_img_dict, _ = load_img_for_pointst3r(frame_path, input_yres, idx, f"frame_{idx}")
         query_ft, target_ft = get_mast3r_ft(prev_img_dict, target_img_dict, model, device)
         _, ft_H, ft_W, D = query_ft.shape
         new_points = []
         for pt in prev_points:
-            # Feature matching
             from pips2_utils.samp import bilinear_sample2d
             import torch.nn.functional as F
             pt_tensor = torch.tensor([[pt[0]]]), torch.tensor([[pt[1]]])
@@ -101,15 +75,13 @@ def main():
                 target_ft[0, :, :, :].reshape(ft_H * ft_W, D)
             ).reshape(ft_H, ft_W)
             max_cos_pos = (target_ft_sim == torch.max(target_ft_sim)).nonzero()[0]
-            pred = [max_cos_pos[1].item() * (w/512.0), max_cos_pos[0].item() * (h/args.input_yres)]
+            pred = [max_cos_pos[1].item() * (w/512.0), max_cos_pos[0].item() * (h/input_yres)]
             new_points.append(pred)
-        logging.info(f"New points for frame {idx}: {new_points}")
         tracks.append(np.array(new_points))
         prev_img_dict = target_img_dict
         prev_points = np.array(new_points) * [sx, sy]
-        logging.info(f"Updated previous points for next iteration: {prev_points}")
-    
     # Visualization
+    vis_images = []
     for idx, (frame_path, pts) in enumerate(zip(frame_paths, tracks)):
         img = Image.open(frame_path).convert("RGB")
         draw = ImageDraw.Draw(img)
@@ -117,10 +89,47 @@ def main():
             x, y = pt
             r = 4
             draw.ellipse((x-r, y-r, x+r, y+r), fill=(255,0,0))
-        img.save(os.path.join(args.output_dir, f"tracked_{idx:04d}.jpg"))
-    logging.info(f"Tracking results saved to {args.output_dir}")
+        img.save(os.path.join(output_dir, f"tracked_{idx:04d}.jpg"))
+        vis_images.append(img)
+    return f"Tracking results saved to {output_dir}", vis_images
+
+def select_points_interface(frames_dir, checkpoint, input_yres, output_dir):
+    frame_paths = sorted(glob.glob(os.path.join(frames_dir, '*.jpg')) + glob.glob(os.path.join(frames_dir, '*.png')))
+    if not frame_paths:
+        return None
+    first_img = Image.open(frame_paths[0])
+    return first_img
+
+with gr.Blocks() as demo:
+    gr.Markdown("## PointSt3R Interactive Tracking Demo")
+    frames_dir = gr.Textbox(value="data/frames", label="Frames Directory")
+    checkpoint = gr.Textbox(value="checkpoints/PointSt3R_95.pth", label="Checkpoint Path")
+    input_yres = gr.Number(value=288, label="Image Height (resize)")
+    output_dir = gr.Textbox(value="output_tracks", label="Output Directory")
+    btn_load = gr.Button("Load First Frame")
+    img = gr.Image(label="Click to select points")
+    points_state = gr.State([])
+
+    def select_handler(img_data, evt: gr.SelectData):
+        points_state.value.append(evt.index)
+        return img_data
+
+    img.select(select_handler, img, None)
+    points_state = gr.State([])
+    btn_track = gr.Button("Track Selected Points")
+    gallery = gr.Gallery(label="Tracking Visualization")
+    result = gr.Textbox(label="Status")
+
+    def load_img(frames_dir, checkpoint, input_yres, output_dir):
+        return select_points_interface(frames_dir, checkpoint, input_yres, output_dir)
+
+    btn_load.click(load_img, [frames_dir, checkpoint, input_yres, output_dir], img)
+
+    def track_points(frames_dir, checkpoint, input_yres, output_dir, points):
+        status, vis_images = gradio_pointst3r(frames_dir, checkpoint, input_yres, output_dir, points)
+        return status, vis_images
+
+    btn_track.click(track_points, [frames_dir, checkpoint, input_yres, output_dir, img], [result, gallery])
 
 if __name__ == "__main__":
-    main()
-
-# python pointst3r_infer_on_frames.py --frames_dir data/frames --checkpoint checkpoints/PointSt3R_95.pth --input_yres 288 --num_points 10 --output_dir output_tracks
+    demo.launch()
