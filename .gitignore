@@ -1,6 +1,7 @@
 *.pth
 data/
 checkpoints/
+output_tracks/
 
 *__pycache__/
 *.pyc

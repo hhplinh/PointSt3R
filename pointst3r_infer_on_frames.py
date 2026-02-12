@@ -8,6 +8,10 @@ import torchvision.transforms as tvf
 from mast3r.model import AsymmetricMASt3R
 import mast3r.utils.path_to_dust3r
 from dust3r.inference import inference
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 # Set device
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -48,12 +52,14 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
     frame_paths = sorted(glob.glob(os.path.join(args.frames_dir, '*.jpg')) + glob.glob(os.path.join(args.frames_dir, '*.png')))
     if len(frame_paths) < 2:
-        print("Need at least 2 frames for tracking.")
+        logging.error("Need at least 2 frames for tracking.")
         return
 
     # Load model
     model = AsymmetricMASt3R.from_pretrained(args.checkpoint).to(device)
+    logging.info(f"Loaded model from {args.checkpoint}")
     model.eval()
+    logging.info(f"Tracking {args.num_points} points across {len(frame_paths)} frames.")
 
     # Load first frame and select points randomly
     first_img = Image.open(frame_paths[0])
@@ -63,6 +69,7 @@ def main():
         np.random.uniform(0, w, args.num_points),
         np.random.uniform(0, h, args.num_points)
     ], axis=-1)
+    logging.info(f"Initial points: {points}")
 
     # Prepare first image for model
     query_img_dict, query_img_shape = load_img_for_pointst3r(frame_paths[0], args.input_yres, 0, "query_img")
@@ -72,6 +79,7 @@ def main():
     points_scaled = points.copy()
     points_scaled[:, 0] *= sx
     points_scaled[:, 1] *= sy
+    logging.info(f"Scaled points for model input: {points_scaled}")
 
     # Track points across frames
     tracks = [points.copy()]
@@ -95,10 +103,12 @@ def main():
             max_cos_pos = (target_ft_sim == torch.max(target_ft_sim)).nonzero()[0]
             pred = [max_cos_pos[1].item() * (w/512.0), max_cos_pos[0].item() * (h/args.input_yres)]
             new_points.append(pred)
+        logging.info(f"New points for frame {idx}: {new_points}")
         tracks.append(np.array(new_points))
         prev_img_dict = target_img_dict
         prev_points = np.array(new_points) * [sx, sy]
-
+        logging.info(f"Updated previous points for next iteration: {prev_points}")
+    
     # Visualization
     for idx, (frame_path, pts) in enumerate(zip(frame_paths, tracks)):
         img = Image.open(frame_path).convert("RGB")
@@ -108,7 +118,9 @@ def main():
             r = 4
             draw.ellipse((x-r, y-r, x+r, y+r), fill=(255,0,0))
         img.save(os.path.join(args.output_dir, f"tracked_{idx:04d}.jpg"))
-    print(f"Tracking results saved to {args.output_dir}")
+    logging.info(f"Tracking results saved to {args.output_dir}")
 
 if __name__ == "__main__":
     main()
+
+# python pointst3r_infer_on_frames.py --frames_dir data/frames --checkpoint checkpoints/PointSt3R_95.pth --input_yres 288 --num_points 10 --output_dir output_tracks
