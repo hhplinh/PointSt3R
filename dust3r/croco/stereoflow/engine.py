@@ -58,7 +58,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, metrics:
         if data_iter_step % accum_iter == 0:
             misc.adjust_learning_rate(optimizer, data_iter_step / len_data_loader + epoch, args)
 
-        with torch.cuda.amp.autocast(enabled=bool(args.amp)):
+        with torch.amp.autocast('cuda', enabled=bool(args.amp)):
             prediction = model(image1, image2)
             prediction, conf = split_prediction_conf(prediction, criterion.with_conf)
             batch_metrics = metrics(prediction.detach(), gt)

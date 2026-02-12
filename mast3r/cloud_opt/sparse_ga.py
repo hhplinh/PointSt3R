@@ -579,7 +579,7 @@ def symmetric_inference(model, img1, img2, device):
 
     def decoder(feat1, feat2, pos1, pos2, shape1, shape2):
         dec1, dec2 = model._decoder(feat1, pos1, feat2, pos2)
-        with torch.cuda.amp.autocast(enabled=False):
+        with torch.amp.autocast('cuda', enabled=False):
             res1 = model._downstream_head(1, [tok.float() for tok in dec1], shape1)
             res2 = model._downstream_head(2, [tok.float() for tok in dec2], shape2)
         return res1, res2
