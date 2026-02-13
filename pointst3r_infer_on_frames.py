@@ -71,11 +71,10 @@ def gradio_pointst3r(frames_dir, checkpoint, input_yres, output_dir, points):
             import torch.nn.functional as F
             pt_np = np.array(pt).flatten()
             pt_tensor = torch.tensor([[pt_np[0]]], device=device), torch.tensor([[pt_np[1]]], device=device)
-            # Debug shapes to help fix RuntimeError
-            print('query_ft shape:', query_ft.shape)
-            print('query_ft permuted shape:', query_ft.permute(0,3,1,2).shape)
-            print('pt_tensor[0] shape:', pt_tensor[0].shape)
-            print('pt_tensor[1] shape:', pt_tensor[1].shape)
+            # print('query_ft shape:', query_ft.shape)
+            # print('query_ft permuted shape:', query_ft.permute(0,3,1,2).shape)
+            # print('pt_tensor[0] shape:', pt_tensor[0].shape)
+            # print('pt_tensor[1] shape:', pt_tensor[1].shape)
             query_ft = query_ft.to(device)
             target_ft = target_ft.to(device)
             query_point_ft = bilinear_sample2d(query_ft.permute(0,3,1,2), pt_tensor[0], pt_tensor[1])[0, :, 0]
@@ -95,7 +94,8 @@ def gradio_pointst3r(frames_dir, checkpoint, input_yres, output_dir, points):
         img = Image.open(frame_path).convert("RGB")
         draw = ImageDraw.Draw(img)
         for pt in pts:
-            x, y = pt
+            pt_flat = np.array(pt).flatten()
+            x, y = pt_flat[0], pt_flat[1]
             r = 4
             draw.ellipse((x-r, y-r, x+r, y+r), fill=(255,0,0))
         img.save(os.path.join(output_dir, f"tracked_{idx:04d}.jpg"))
