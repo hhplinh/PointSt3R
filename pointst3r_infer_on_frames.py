@@ -13,8 +13,8 @@ import gradio as gr
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-# Set device
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# device = 'cpu'
 ImgNorm = tvf.Compose([
     tvf.ToTensor(),
     tvf.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -38,7 +38,7 @@ def get_mast3r_ft(query_img, target_img, model, device):
     output = inference([(query_img, target_img)], model, device, batch_size=1, verbose=False)
     view1, pred1 = output["view1"], output["pred1"]
     view2, pred2 = output["view2"], output["pred2"]
-    return pred1["desc"].detach().cpu(), pred2["desc"].detach().cpu()
+    return pred1["desc"].detach(), pred2["desc"].detach()
 
 def gradio_pointst3r(frames_dir, checkpoint, input_yres, output_dir, points):
     os.makedirs(output_dir, exist_ok=True)
@@ -55,6 +55,7 @@ def gradio_pointst3r(frames_dir, checkpoint, input_yres, output_dir, points):
     sy = H_ / h
     sx = W_ / w
     points_scaled = points_np.copy()
+    points_scaled = points_scaled.astype(np.float64)
     points_scaled[:, 0] *= sx
     points_scaled[:, 1] *= sy
     tracks = [points_np.copy()]
@@ -68,7 +69,15 @@ def gradio_pointst3r(frames_dir, checkpoint, input_yres, output_dir, points):
         for pt in prev_points:
             from pips2_utils.samp import bilinear_sample2d
             import torch.nn.functional as F
-            pt_tensor = torch.tensor([[pt[0]]]), torch.tensor([[pt[1]]])
+            pt_np = np.array(pt).flatten()
+            pt_tensor = torch.tensor([[pt_np[0]]], device=device), torch.tensor([[pt_np[1]]], device=device)
+            # Debug shapes to help fix RuntimeError
+            print('query_ft shape:', query_ft.shape)
+            print('query_ft permuted shape:', query_ft.permute(0,3,1,2).shape)
+            print('pt_tensor[0] shape:', pt_tensor[0].shape)
+            print('pt_tensor[1] shape:', pt_tensor[1].shape)
+            query_ft = query_ft.to(device)
+            target_ft = target_ft.to(device)
             query_point_ft = bilinear_sample2d(query_ft.permute(0,3,1,2), pt_tensor[0], pt_tensor[1])[0, :, 0]
             target_ft_sim = F.cosine_similarity(
                 query_point_ft.unsqueeze(0).repeat(ft_H * ft_W, 1),
@@ -112,9 +121,16 @@ with gr.Blocks() as demo:
 
     def select_handler(img_data, evt: gr.SelectData):
         points_state.value.append(evt.index)
-        return img_data
+        # Draw visual cue for selected points
+        img = Image.fromarray(img_data) if isinstance(img_data, np.ndarray) else img_data
+        draw = ImageDraw.Draw(img)
+        for pt in points_state.value:
+            x, y = pt
+            r = 6
+            draw.ellipse((x-r, y-r, x+r, y+r), fill=(0,255,0), outline=(0,255,0))
+        return np.array(img)
 
-    img.select(select_handler, img, None)
+    img.select(select_handler, img, img)
     points_state = gr.State([])
     btn_track = gr.Button("Track Selected Points")
     gallery = gr.Gallery(label="Tracking Visualization")
