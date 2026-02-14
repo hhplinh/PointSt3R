@@ -17,6 +17,8 @@ huggingface-hub[torch]>=0.22
 numpy
 Pillow
 setuptools
+scipy
+einops
 # Ensure CUDA toolkit is installed on your system (not pip installable)
 # dust3r and its dependencies should be included if used
 # Optional dependencies (uncomment as needed):
