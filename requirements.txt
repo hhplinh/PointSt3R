@@ -19,6 +19,8 @@ Pillow
 setuptools
 scipy
 einops
+einopsaudioop-lts
+pyaudioop
 # Ensure CUDA toolkit is installed on your system (not pip installable)
 # dust3r and its dependencies should be included if used
 # Optional dependencies (uncomment as needed):
